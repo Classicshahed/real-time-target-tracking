@@ -25,14 +25,19 @@ def main():
     # Class names for YOLOv8 (Class 0 is 'person')
     classNames = model.names
 
-    # 3. Open DroidCam stream via WiFi
-    stream_url = os.environ.get("STREAM_URL", "http://192.168.0.103:4747/video")
+    # 3. Open Camera (IP or Built-in)
+    stream_url_env = os.environ.get("STREAM_URL", "0")
+    stream_url = int(stream_url_env) if stream_url_env.isdigit() else stream_url_env
+
     print(f"Connecting to Camera at: {stream_url}")
     cap = cv2.VideoCapture(stream_url)
     
     if not cap.isOpened():
-        print("CRITICAL ERROR: Could not find any camera stream at that IP!")
-        return
+        print("IP Camera failed! Falling back to built-in webcam (0)...")
+        cap = cv2.VideoCapture(0)
+        if not cap.isOpened():
+            print("CRITICAL ERROR: Could not find any camera stream!")
+            return
 
     # Get video properties for the VideoWriter
     frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))

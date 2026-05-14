@@ -49,13 +49,18 @@ global_alert = False
 def process_video():
     global current_frame, latest_frame_bytes, is_recording, out, prev_frame_time, line_y, global_alert
     
-    stream_url = os.environ.get("STREAM_URL", "http://192.168.0.103:4747/video")
+    stream_url_env = os.environ.get("STREAM_URL", "0")
+    stream_url = int(stream_url_env) if stream_url_env.isdigit() else stream_url_env
+
     print(f"Connecting to Camera at: {stream_url}")
     cap = cv2.VideoCapture(stream_url)
     
     if not cap.isOpened():
-        print("Camera failed to connect over IP! Falling back to sample_video.mp4...")
-        cap = cv2.VideoCapture("sample_video.mp4")
+        print("Camera failed to connect over IP! Falling back to built-in webcam (0)...")
+        cap = cv2.VideoCapture(0)
+        if not cap.isOpened():
+            print("Webcam also failed! Falling back to sample_video.mp4...")
+            cap = cv2.VideoCapture("sample_video.mp4")
         
     frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
