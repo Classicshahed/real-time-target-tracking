@@ -1,0 +1,15 @@
+.env
+__pycache__/
+*.pyc
+venv/
+env/
+.venv/
+
+# AI models
+*.pt
+
+# Media
+videos/
+screenshots/
+output*.avi
+sample_video.mp4

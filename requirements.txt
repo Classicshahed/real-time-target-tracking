@@ -1,0 +1,5 @@
+ultralytics>=8.3.0
+opencv-python>=4.10.0
+cvzone==1.6.1
+Flask==3.0.3
+python-dotenv==1.0.1
