@@ -32,28 +32,17 @@ This project uses your smartphone as a wireless IP camera via DroidCam.
 
 ### 3. Run the Application
 
-You have two ways to run this project: the Web Dashboard or the Desktop Window.
+To run the application, start the local Flask server which provides a beautiful web dashboard:
 
-#### Option A: Web Dashboard (Recommended)
-This runs a local Flask server that provides a beautiful web interface.
 ```bash
 python app.py
 ```
+
 * After running the command, open your web browser and go to: **http://127.0.0.1:5000**
 * From the dashboard, you can view the live feed, record video, take screenshots, upload fraud suspect images, and access the media gallery.
 
-#### Option B: Simple Desktop Window
-If you just want a quick, bare-bones window to view the tracking without the web dashboard:
-```bash
-python main.py
-```
-* A desktop window will pop up.
-* Press `s` on your keyboard to save a screenshot.
-* Press `q` to quit the application and save the video.
-
 ## 📂 Project Structure
 * `app.py`: The Flask Web Server and background AI thread.
-* `main.py`: The standalone desktop script.
 * `yolov8n.pt`: The lightweight YOLO AI model (downloads automatically if missing).
 * `.env`: Configuration file containing your camera URL.
 * `requirements.txt`: The list of Python packages required.

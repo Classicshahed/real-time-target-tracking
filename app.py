@@ -32,9 +32,6 @@ latest_frame_bytes = None
 frame_condition = threading.Condition()
 lock = threading.Lock()
 
-line_y = 240
-tracker_history = {}
-total_count = set()
 track_paths = defaultdict(list)
 prev_frame_time = 0
 
@@ -47,7 +44,7 @@ checked_ids = set()
 global_alert = False
 
 def process_video():
-    global current_frame, latest_frame_bytes, is_recording, out, prev_frame_time, line_y, global_alert
+    global current_frame, latest_frame_bytes, is_recording, out, prev_frame_time, global_alert
     
     stream_url_env = os.environ.get("STREAM_URL", "0")
     stream_url = int(stream_url_env) if stream_url_env.isdigit() else stream_url_env
@@ -66,7 +63,6 @@ def process_video():
     frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
     fps = int(cap.get(cv2.CAP_PROP_FPS))
     if fps <= 0: fps = 30
-    if frame_height > 0: line_y = frame_height // 2
     
     fourcc = cv2.VideoWriter_fourcc(*'XVID')
 
@@ -84,7 +80,6 @@ def process_video():
         prev_frame_time = new_frame_time
 
         results = model.track(frame, persist=True, classes=[0], conf=0.5, verbose=False, imgsz=320)
-        cv2.line(frame, (0, line_y), (frame_width, line_y), (0, 0, 255), 3)
         
         local_alert = False
 
@@ -163,20 +158,13 @@ def process_video():
                         points = track_paths[track_id]
                         for i in range(1, len(points)):
                             cv2.line(frame, points[i-1], points[i], color, 2)
+                            
                         
-                        if track_id in tracker_history:
-                            prev_cx, prev_cy = tracker_history[track_id]
-                            if (prev_cy < line_y and cy >= line_y) or (prev_cy > line_y and cy <= line_y):
-                                total_count.add(track_id)
-                                cv2.line(frame, (0, line_y), (frame_width, line_y), (0, 255, 0), 5)
-                                
-                        tracker_history[track_id] = (cx, cy)
                         
         with lock:
             global_alert = local_alert
 
         cvzone.putTextRect(frame, f'FPS: {int(fps_current)}', (20, 50), scale=2, thickness=2, offset=10, colorR=(0, 0, 0), colorT=(0, 255, 0))
-        cvzone.putTextRect(frame, f'Total Crossed: {len(total_count)}', (20, 100), scale=2, thickness=2, offset=10, colorR=(0, 0, 0), colorT=(0, 255, 255))
 
         with lock:
             current_frame = frame.copy()
