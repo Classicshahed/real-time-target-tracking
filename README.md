@@ -25,7 +25,7 @@ This project uses your smartphone as a wireless IP camera via DroidCam.
 3. Open the `.env` file in the project folder.
 4. Update the `STREAM_URL` to match your phone's IP exactly:
    ```text
-   STREAM_URL=http://192.168.0.104:4747/video
+   STREAM_URL=http://192.168.0.102:4747/video
    ```
 
 *(Note: If your router restarts or you disconnect from the Wi-Fi, your phone's IP might change. You will need to update the `.env` file whenever the IP changes.)*
