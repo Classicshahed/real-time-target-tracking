@@ -41,10 +41,11 @@ fraud_kp = None
 fraud_des = None
 fraud_ids = set()
 checked_ids = set()
+last_alert_time = 0
 global_alert = False
 
 def process_video():
-    global current_frame, latest_frame_bytes, is_recording, out, prev_frame_time, global_alert
+    global current_frame, latest_frame_bytes, is_recording, out, prev_frame_time, global_alert, last_alert_time
     
     stream_url_env = os.environ.get("STREAM_URL", "0")
     stream_url = int(stream_url_env) if stream_url_env.isdigit() else stream_url_env
@@ -122,7 +123,7 @@ def process_video():
                                                 if m.distance < 0.75 * n.distance:
                                                     good.append(m)
                                                     
-                                        if len(good) >= 12: 
+                                        if len(good) >= 18: # Increased threshold for better accuracy
                                             is_fraud = True
                                             with lock:
                                                 fraud_ids.add(track_id)
@@ -145,13 +146,17 @@ def process_video():
                             color = (255, 0, 255)
                             display_text = f"{currentClass} {conf}"
 
-                    cvzone.cornerRect(frame, (x1, y1, w, h), l=30, t=5, rt=1, colorR=color, colorC=color)
-                    cvzone.putTextRect(frame, display_text, (max(0, x1), max(35, y1 - 10)), scale=1.5, thickness=2, offset=5, colorR=color, colorT=(255, 255, 255))
-                                       
+                    # Simplified Box: Always draw corner rect, but only labels for fraud
+                    cvzone.cornerRect(frame, (x1, y1, w, h), l=20, t=3, rt=1, colorR=color, colorC=color)
+                    
+                    if is_fraud:
+                        cvzone.putTextRect(frame, f"🚨 TARGET DETECTED", (max(0, x1), max(35, y1 - 10)), scale=1.2, thickness=2, offset=5, colorR=(0, 0, 255))
+                    
                     cx, cy = x1 + w // 2, y1 + h // 2
                     
                     if track_id != -1:
-                        cv2.circle(frame, (cx, cy), 5, color, cv2.FILLED)
+                        # Draw a small dot for the track
+                        cv2.circle(frame, (cx, cy), 3, color, cv2.FILLED)
                         track_paths[track_id].append((cx, cy))
                         if len(track_paths[track_id]) > 30: track_paths[track_id].pop(0)
                             
@@ -162,7 +167,11 @@ def process_video():
                         
                         
         with lock:
-            global_alert = local_alert
+            if local_alert:
+                last_alert_time = time.time()
+            
+            # Alert stays active for 5 seconds after last detection
+            global_alert = (time.time() - last_alert_time) < 5.0
 
         cvzone.putTextRect(frame, f'FPS: {int(fps_current)}', (20, 50), scale=2, thickness=2, offset=10, colorR=(0, 0, 0), colorT=(0, 255, 0))
 
@@ -229,6 +238,18 @@ def upload_fraud():
             
         return jsonify({'status': 'success', 'message': 'Fraud suspect registered!'})
     return jsonify({'status': 'error', 'message': 'Invalid image'})
+
+@app.route('/clear_fraud', methods=['POST'])
+def clear_fraud():
+    global fraud_kp, fraud_des, fraud_ids, checked_ids, global_alert, last_alert_time
+    with lock:
+        fraud_kp = None
+        fraud_des = None
+        fraud_ids.clear()
+        checked_ids.clear()
+        global_alert = False
+        last_alert_time = 0
+    return jsonify({'status': 'success', 'message': 'Suspect data cleared'})
 
 @app.route('/alert_status')
 def alert_status():

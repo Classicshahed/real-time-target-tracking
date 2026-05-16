@@ -5,205 +5,78 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Saved Media - AI Tracker</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --dark: #0f172a;
-            --panel: rgba(30, 41, 59, 0.7);
-            --text: #f8fafc;
-        }
-
-        body {
-            margin: 0;
-            padding: 2rem;
-            background-color: var(--dark);
-            color: var(--text);
-            font-family: 'Inter', sans-serif;
-            min-height: 100vh;
-            background-image: 
-                radial-gradient(at 0% 0%, hsla(253,16%,7%,1) 0, transparent 50%), 
-                radial-gradient(at 50% 0%, hsla(225,39%,30%,0.2) 0, transparent 50%), 
-                radial-gradient(at 100% 0%, hsla(339,49%,30%,0.2) 0, transparent 50%);
-        }
-
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 3rem;
-            padding-bottom: 1rem;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .header h1 {
-            margin: 0;
-            font-weight: 800;
-            background: linear-gradient(to right, #38bdf8, #818cf8);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        .back-btn {
-            background: rgba(255, 255, 255, 0.1);
-            color: white;
-            padding: 0.75rem 1.5rem;
-            border-radius: 12px;
-            text-decoration: none;
-            font-weight: 600;
-            transition: all 0.2s;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .back-btn:hover {
-            background: rgba(255, 255, 255, 0.2);
-        }
-
-        section {
-            margin-bottom: 4rem;
-        }
-
-        h2 {
-            font-size: 1.5rem;
-            margin-bottom: 1.5rem;
-            color: #e2e8f0;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 2rem;
-        }
-
-        .card {
-            background: var(--panel);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 16px;
-            overflow: hidden;
-            transition: transform 0.2s;
-        }
-
-        .card:hover {
-            transform: translateY(-5px);
-            border-color: rgba(56, 189, 248, 0.5);
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
-        }
-
-        .card img {
-            width: 100%;
-            height: 200px;
-            object-fit: cover;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .card-body {
-            padding: 1rem;
-        }
-
-        .card-title {
-            font-size: 0.875rem;
-            color: #94a3b8;
-            word-break: break-all;
-            margin-bottom: 1rem;
-        }
-
-        .download-btn {
-            display: inline-block;
-            background: #0ea5e9;
-            color: white;
-            text-decoration: none;
-            padding: 0.5rem 1rem;
-            border-radius: 8px;
-            font-size: 0.875rem;
-            font-weight: 600;
-            transition: background 0.2s;
-        }
-
-        .download-btn:hover {
-            background: #0284c7;
-        }
-
-        .video-card {
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            padding: 2rem;
-            text-align: center;
-        }
-
-        .video-icon {
-            color: #ef4444;
-            margin-bottom: 1rem;
-        }
-
-        .empty {
-            grid-column: 1 / -1;
-            text-align: center;
-            padding: 3rem;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 16px;
-            color: #94a3b8;
-        }
-    </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
 
-    <div class="header">
-        <h1>Saved Media Gallery</h1>
-        <a href="/" class="back-btn">
-            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
-            Back to Dashboard
-        </a>
-    </div>
+    <main class="container">
+        <header class="header">
+            <h1>Media Gallery</h1>
+            <p>Historical captures and recordings</p>
+            
+            <a href="/" class="nav-link" style="left: 0; right: auto;">
+                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                Back to Dashboard
+            </a>
+        </header>
 
-    <section>
-        <h2>
-            <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-            Screenshots
-        </h2>
-        <div class="grid">
-            {% for shot in screenshots %}
-            <div class="card">
-                <a href="/media/screenshots/{{ shot }}" target="_blank">
-                    <img src="/media/screenshots/{{ shot }}" alt="{{ shot }}">
-                </a>
-                <div class="card-body">
-                    <div class="card-title">{{ shot }}</div>
-                    <a href="/media/screenshots/{{ shot }}" download class="download-btn">Download Image</a>
+        <section class="gallery-section">
+            <h2>
+                <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                Snapshots
+            </h2>
+            <div class="grid">
+                {% for shot in screenshots %}
+                <article class="card glass">
+                    <a href="/media/screenshots/{{ shot }}" target="_blank">
+                        <img src="/media/screenshots/{{ shot }}" alt="{{ shot }}" loading="lazy">
+                    </a>
+                    <div class="card-content">
+                        <div class="card-title">{{ shot }}</div>
+                        <div class="card-actions">
+                            <a href="/media/screenshots/{{ shot }}" download class="btn-primary" style="padding: 0.5rem 1rem; font-size: 0.8rem; border-radius: 8px;">
+                                Download
+                            </a>
+                        </div>
+                    </div>
+                </article>
+                {% else %}
+                <div class="empty-state">
+                    <p>No snapshots found. Start tracking to capture some!</p>
                 </div>
+                {% endfor %}
             </div>
-            {% else %}
-            <div class="empty">No screenshots found. Take some from the dashboard!</div>
-            {% endfor %}
-        </div>
-    </section>
+        </section>
 
-    <section>
-        <h2>
-            <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
-            Recorded Videos
-        </h2>
-        <div class="grid">
-            {% for vid in videos %}
-            <div class="card video-card">
-                <div class="video-icon">
-                    <svg width="48" height="48" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z"></path></svg>
+        <section class="gallery-section">
+            <h2>
+                <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                Recordings
+            </h2>
+            <div class="grid">
+                {% for vid in videos %}
+                <article class="card glass">
+                    <div style="height: 220px; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.2);">
+                        <svg width="48" height="48" fill="none" stroke="#ef4444" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z"></path></svg>
+                    </div>
+                    <div class="card-content">
+                        <div class="card-title">{{ vid }}</div>
+                        <div class="card-actions">
+                            <a href="/media/videos/{{ vid }}" download class="btn-danger" style="padding: 0.5rem 1rem; font-size: 0.8rem; border-radius: 8px;">
+                                Download AVI
+                            </a>
+                        </div>
+                    </div>
+                </article>
+                {% else %}
+                <div class="empty-state">
+                    <p>No recordings found. Use the dashboard to record sessions.</p>
                 </div>
-                <div class="card-body">
-                    <div class="card-title">{{ vid }}</div>
-                    <!-- Using download attribute because .avi doesn't play natively in browsers -->
-                    <a href="/media/videos/{{ vid }}" download class="download-btn" style="background: #ef4444;">Download Video</a>
-                </div>
+                {% endfor %}
             </div>
-            {% else %}
-            <div class="empty">No videos found. Start recording from the dashboard!</div>
-            {% endfor %}
-        </div>
-    </section>
+        </section>
+    </main>
 
 </body>
 </html>
+

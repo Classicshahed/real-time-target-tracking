@@ -5,325 +5,60 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Target Tracking Dashboard</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --primary: #0ea5e9;
-            --primary-hover: #0284c7;
-            --danger: #ef4444;
-            --danger-hover: #dc2626;
-            --dark: #0f172a;
-            --panel: rgba(30, 41, 59, 0.7);
-            --text: #f8fafc;
-        }
-
-        body {
-            margin: 0;
-            padding: 0;
-            background-color: var(--dark);
-            color: var(--text);
-            font-family: 'Inter', sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            min-height: 100vh;
-            background-image: 
-                radial-gradient(at 0% 0%, hsla(253,16%,7%,1) 0, transparent 50%), 
-                radial-gradient(at 50% 0%, hsla(225,39%,30%,0.2) 0, transparent 50%), 
-                radial-gradient(at 100% 0%, hsla(339,49%,30%,0.2) 0, transparent 50%);
-        }
-
-        .header {
-            margin-top: 2rem;
-            text-align: center;
-            animation: fadeIn 1s ease-in;
-        }
-
-        .header h1 {
-            font-weight: 800;
-            font-size: 2.5rem;
-            margin: 0;
-            background: linear-gradient(to right, #38bdf8, #818cf8);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        .header p {
-            color: #94a3b8;
-            margin-top: 0.5rem;
-        }
-
-        .dashboard {
-            margin-top: 2rem;
-            padding: 2rem;
-            background: var(--panel);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 24px;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 2rem;
-        }
-
-        .video-container {
-            position: relative;
-            border-radius: 16px;
-            overflow: hidden;
-            box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1), 0 10px 30px rgba(0,0,0,0.5);
-            background: #000;
-            width: 100%;
-            max-width: 800px;
-            aspect-ratio: 4/3;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-
-        .video-container img {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-        }
-
-        .controls {
-            display: flex;
-            gap: 1rem;
-            width: 100%;
-            justify-content: center;
-        }
-
-        button {
-            padding: 0.75rem 1.5rem;
-            font-size: 1rem;
-            font-weight: 600;
-            font-family: 'Inter', sans-serif;
-            color: white;
-            border: none;
-            border-radius: 12px;
-            cursor: pointer;
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-        }
-
-        button:active {
-            transform: scale(0.95);
-        }
-
-        #screenshot-btn {
-            background-color: var(--primary);
-        }
-
-        #screenshot-btn:hover {
-            background-color: var(--primary-hover);
-            box-shadow: 0 10px 15px -3px rgba(14, 165, 233, 0.3);
-        }
-
-        #record-btn {
-            background-color: var(--danger);
-        }
-
-        #record-btn:hover {
-            background-color: var(--danger-hover);
-            box-shadow: 0 10px 15px -3px rgba(239, 68, 68, 0.3);
-        }
-
-        #record-btn.recording {
-            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-        }
-
-        .status-badge {
-            position: absolute;
-            top: 1rem;
-            right: 1rem;
-            background: rgba(239, 68, 68, 0.9);
-            color: white;
-            padding: 0.25rem 0.75rem;
-            border-radius: 9999px;
-            font-size: 0.875rem;
-            font-weight: 600;
-            display: none;
-            align-items: center;
-            gap: 0.5rem;
-            backdrop-filter: blur(4px);
-        }
-
-        .status-badge.visible {
-            display: flex;
-        }
-
-        .status-dot {
-            width: 8px;
-            height: 8px;
-            background-color: white;
-            border-radius: 50%;
-            animation: blink 1s infinite;
-        }
-
-        /* Toast Notification */
-        .toast {
-            position: fixed;
-            bottom: -100px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(15, 23, 42, 0.9);
-            color: white;
-            padding: 1rem 2rem;
-            border-radius: 9999px;
-            font-weight: 600;
-            transition: bottom 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(8px);
-            z-index: 50;
-        }
-
-        .toast.show {
-            bottom: 2rem;
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: .7; }
-        }
-
-        @keyframes blink {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0; }
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(-10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .gallery-btn {
-            position: absolute;
-            top: 2rem;
-            right: 2rem;
-            background: rgba(30, 41, 59, 0.8);
-            color: white;
-            padding: 0.75rem 1.5rem;
-            border-radius: 12px;
-            text-decoration: none;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            font-weight: 600;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(8px);
-            transition: all 0.2s;
-        }
-
-        .fraud-btn {
-            background-color: var(--danger);
-            color: white;
-            padding: 0.75rem 1.5rem;
-            border-radius: 12px;
-            font-family: 'Inter', sans-serif;
-            font-size: 1rem;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            cursor: pointer;
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-            border: none;
-        }
-
-        .fraud-btn:hover {
-            background-color: var(--danger-hover);
-            transform: translateY(-2px);
-            box-shadow: 0 10px 15px -3px rgba(239, 68, 68, 0.3);
-        }
-
-        .fraud-btn:active {
-            transform: scale(0.95);
-        }
-
-        .alert-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            background: rgba(239, 68, 68, 0.4);
-            z-index: 100;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            pointer-events: none;
-            opacity: 0;
-            transition: opacity 0.2s;
-            box-shadow: inset 0 0 100px rgba(239, 68, 68, 0.8);
-        }
-
-        .alert-overlay.active {
-            opacity: 1;
-            animation: flashRed 1s infinite;
-        }
-
-        .alert-text {
-            font-size: 5rem;
-            font-weight: 900;
-            color: white;
-            text-shadow: 0 0 20px rgba(0,0,0,0.8), 0 0 40px red;
-            letter-spacing: 5px;
-        }
-
-        @keyframes flashRed {
-            0%, 100% { background: rgba(239, 68, 68, 0.3); }
-            50% { background: rgba(239, 68, 68, 0.6); box-shadow: inset 0 0 150px red; }
-        }
-    </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
 
     <div id="fraud-alert" class="alert-overlay">
-        <div class="alert-text">🚨 FRAUD DETECTED 🚨</div>
+        <div class="alert-content">🚨 FRAUD DETECTED 🚨</div>
     </div>
 
-    <div class="header">
-        <h1>AI Target Tracking</h1>
-        <p>Live Video Analytics Dashboard</p>
+    <main class="container">
+        <header class="header">
+            <h1>AI Target Tracking</h1>
+            <p>Real-time Computer Vision Analytics</p>
 
-        <a href="/gallery" class="gallery-btn">
-            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-            View Saved Media
-        </a>
-    </div>
+            <a href="/gallery" class="nav-link">
+                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                Media Gallery
+            </a>
+        </header>
 
-    <div class="dashboard">
-        <div class="video-container">
-            <div id="recording-badge" class="status-badge">
-                <div class="status-dot"></div> REC
+        <div class="dashboard glass">
+            <div class="video-container">
+                <div id="recording-badge" class="badge">
+                    <div class="badge-dot"></div> Live Recording
+                </div>
+                <!-- Live MJPEG Stream from Flask -->
+                <img src="/video_feed" alt="Live Video Feed">
             </div>
-            <!-- Live MJPEG Stream from Flask -->
-            <img src="/video_feed" alt="Live Video Feed">
-        </div>
 
-        <div class="controls">
-            <label class="fraud-btn">
-                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
-                Upload Fraud Suspect
-                <input type="file" id="fraud-upload" accept="image/*" style="display: none;" onchange="uploadFraud(this)">
-            </label>
-            <button id="screenshot-btn" onclick="takeScreenshot()">
-                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-                Screenshot
-            </button>
-            <button id="record-btn" onclick="toggleRecording()">
-                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
-                <span id="record-text">Start Recording</span>
-            </button>
+            <div class="controls">
+                <label class="btn-label" style="cursor: pointer;">
+                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                    Register Suspect
+                    <input type="file" id="fraud-upload" accept="image/*" style="display: none;" onchange="uploadFraud(this)">
+                </label>
+                
+                <button id="clear-fraud-btn" class="btn-secondary" onclick="clearSuspect()" style="background: rgba(255,255,255,0.05);">
+                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                    Remove Suspect
+                </button>
+                
+                <button id="screenshot-btn" class="btn-primary" onclick="takeScreenshot()">
+                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                    Capture Frame
+                </button>
+                
+                <button id="record-btn" class="btn-danger" onclick="toggleRecording()">
+                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                    <span id="record-text">Start Recording</span>
+                </button>
+            </div>
         </div>
-    </div>
+    </main>
 
-    <div id="toast" class="toast">Action Successful</div>
+    <div id="toast" class="toast glass">Action Successful</div>
 
     <script>
         function showToast(message) {
@@ -395,6 +130,18 @@
             input.value = ''; // Reset input
         }
 
+        async function clearSuspect() {
+            try {
+                const response = await fetch('/clear_fraud', { method: 'POST' });
+                const data = await response.json();
+                if(data.status === 'success') {
+                    showToast('🧹 Suspect data cleared');
+                }
+            } catch (error) {
+                console.error('Error clearing suspect:', error);
+            }
+        }
+
         let audioCtx = null;
         let beepInterval = null;
 
@@ -421,14 +168,12 @@
             oscillator.stop(audioCtx.currentTime + 0.5);
         }
 
-        // Initialize AudioContext on first user interaction
         document.body.addEventListener('click', () => {
             if (!audioCtx) {
                 audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             }
         }, { once: true });
 
-        // Poll for alerts every 500ms
         setInterval(async () => {
             try {
                 const response = await fetch('/alert_status');
@@ -453,3 +198,4 @@
     </script>
 </body>
 </html>
+
