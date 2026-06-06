@@ -1,209 +1,163 @@
-from flask import Flask, render_template, Response, jsonify, request, send_from_directory
-import cv2
-from ultralytics import YOLO
-import cvzone
-import math
 import os
 import time
+import math
 import random
-from collections import defaultdict
 import threading
+from collections import defaultdict
+
+import cv2
+import cvzone
 import numpy as np
+from flask import Flask, render_template, Response, jsonify, request, send_from_directory
+from ultralytics import YOLO
 from dotenv import load_dotenv
 
 load_dotenv()
 
-app = Flask(__name__)
+class TrackerApp:
+    def __init__(self):
+        self.screenshots_dir = "screenshots"
+        self.videos_dir = "videos"
+        os.makedirs(self.screenshots_dir, exist_ok=True)
+        os.makedirs(self.videos_dir, exist_ok=True)
 
-# Globals & Setup
-screenshots_dir = "screenshots"
-videos_dir = "videos"
-os.makedirs(screenshots_dir, exist_ok=True)
-os.makedirs(videos_dir, exist_ok=True)
+        print("Loading YOLOv8 model...")
+        self.model = YOLO('yolov8n.pt')
+        self.classNames = self.model.names
 
-print("Loading YOLOv8 model...")
-model = YOLO('yolov8n.pt')
-classNames = model.names
+        self.is_recording = False
+        self.out = None
+        self.current_frame = None
+        self.latest_frame_bytes = None
+        self.frame_condition = threading.Condition()
+        self.lock = threading.Lock()
 
-is_recording = False
-out = None
-current_frame = None
-latest_frame_bytes = None
-frame_condition = threading.Condition()
-lock = threading.Lock()
+        self.track_paths = defaultdict(list)
+        self.prev_frame_time = 0
 
-track_paths = defaultdict(list)
-prev_frame_time = 0
+        # Stats
+        self.current_fps = 0
+        self.objects_count = 0
 
-# Fraud Detection Globals
-sift = cv2.SIFT_create()
-fraud_kp = None
-fraud_des = None
-fraud_ids = set()
-checked_ids = set()
-last_alert_time = 0
-global_alert = False
+    def generate_fallback_image(self, message):
+        img = np.zeros((480, 640, 3), dtype=np.uint8)
+        cv2.putText(img, message, (50, 240), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+        return img
 
-def process_video():
-    global current_frame, latest_frame_bytes, is_recording, out, prev_frame_time, global_alert, last_alert_time
-    
-    stream_url_env = os.environ.get("STREAM_URL", "0")
-    stream_url = int(stream_url_env) if stream_url_env.isdigit() else stream_url_env
+    def process_video(self):
+        stream_url_env = os.environ.get("STREAM_URL", "0")
+        stream_url = int(stream_url_env) if stream_url_env.isdigit() else stream_url_env
 
-    print(f"Connecting to Camera at: {stream_url}")
-    cap = cv2.VideoCapture(stream_url)
-    
-    if not cap.isOpened():
-        print("Camera failed to connect over IP! Falling back to built-in webcam (0)...")
-        cap = cv2.VideoCapture(0)
+        print(f"Connecting to Camera at: {stream_url}")
+        cap = cv2.VideoCapture(stream_url)
+
         if not cap.isOpened():
-            print("Webcam also failed! Falling back to sample_video.mp4...")
-            cap = cv2.VideoCapture("sample_video.mp4")
-        
-    frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-    frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-    fps = int(cap.get(cv2.CAP_PROP_FPS))
-    if fps <= 0: fps = 30
-    
-    fourcc = cv2.VideoWriter_fourcc(*'XVID')
+            print("Camera failed to connect over IP! Falling back to built-in webcam (0)...")
+            cap = cv2.VideoCapture(0)
+            if not cap.isOpened():
+                print("Webcam also failed! Using fallback image stream.")
+                cap = None
 
-    while True:
-        success, frame = cap.read()
-        if not success:
-            cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
-            success, frame = cap.read()
-            if not success:
-                time.sleep(0.1)
-                continue
-            
-        new_frame_time = time.time()
-        fps_current = 1 / (new_frame_time - prev_frame_time + 0.0001)
-        prev_frame_time = new_frame_time
+        if cap:
+            frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+            frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+            fps = int(cap.get(cv2.CAP_PROP_FPS))
+            if fps <= 0: fps = 30
+        else:
+            frame_width, frame_height, fps = 640, 480, 30
 
-        results = model.track(frame, persist=True, classes=[0], conf=0.5, verbose=False, imgsz=320)
-        
-        local_alert = False
+        fourcc = cv2.VideoWriter_fourcc(*'XVID')
 
-        for r in results:
-            boxes = r.boxes
-            for box in boxes:
-                x1, y1, x2, y2 = box.xyxy[0]
-                x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
-                w, h = x2 - x1, y2 - y1
-                conf = math.ceil((box.conf[0] * 100)) / 100
-                cls = int(box.cls[0])
-                currentClass = classNames[cls]
-                track_id = int(box.id[0]) if box.id is not None else -1
+        while True:
+            if cap:
+                success, frame = cap.read()
+                if not success:
+                    cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+                    success, frame = cap.read()
+                    if not success:
+                        time.sleep(0.1)
+                        continue
+            else:
+                frame = self.generate_fallback_image("CAMERA DISCONNECTED")
+                time.sleep(1/fps)
 
-                if currentClass == "person":
-                    is_fraud = False
-                    
-                    with lock:
-                        local_fraud_des = fraud_des
-                        
-                    if local_fraud_des is not None:
-                        if track_id != -1 and track_id in fraud_ids:
-                            is_fraud = True
-                        elif track_id != -1 and track_id not in checked_ids:
-                            x1_c, y1_c = max(0, x1), max(0, y1)
-                            x2_c, y2_c = min(frame_width, x2), min(frame_height, y2)
-                            if x2_c - x1_c > 20 and y2_c - y1_c > 20:
-                                person_crop = frame[y1_c:y2_c, x1_c:x2_c]
-                                gray_crop = cv2.cvtColor(person_crop, cv2.COLOR_BGR2GRAY)
-                                kp_crop, des_crop = sift.detectAndCompute(gray_crop, None)
-                                
-                                if des_crop is not None and len(des_crop) > 0:
-                                    bf = cv2.BFMatcher()
-                                    try:
-                                        matches = bf.knnMatch(local_fraud_des, des_crop, k=2)
-                                        good = []
-                                        for match_set in matches:
-                                            if len(match_set) == 2:
-                                                m, n = match_set
-                                                if m.distance < 0.75 * n.distance:
-                                                    good.append(m)
-                                                    
-                                        if len(good) >= 18: # Increased threshold for better accuracy
-                                            is_fraud = True
-                                            with lock:
-                                                fraud_ids.add(track_id)
-                                    except Exception:
-                                        pass
-                                        
-                            with lock:
-                                checked_ids.add(track_id)
-                    
-                    if is_fraud:
-                        color = (0, 0, 255) # RED
-                        local_alert = True
-                        display_text = f"🚨 FRAUD ID:{track_id} 🚨 {conf}" if track_id != -1 else f"🚨 FRAUD 🚨 {conf}"
-                    else:
-                        if track_id != -1:
-                            random.seed(track_id)
-                            color = (random.randint(50, 255), random.randint(50, 255), random.randint(100, 255))
-                            display_text = f"ID:{track_id} {currentClass} {conf}"
-                        else:
-                            color = (255, 0, 255)
-                            display_text = f"{currentClass} {conf}"
+            new_frame_time = time.time()
+            fps_current = 1 / (new_frame_time - self.prev_frame_time + 0.0001)
+            self.prev_frame_time = new_frame_time
 
-                    # Simplified Box: Always draw corner rect, but only labels for fraud
-                    cvzone.cornerRect(frame, (x1, y1, w, h), l=20, t=3, rt=1, colorR=color, colorC=color)
-                    
-                    if is_fraud:
-                        cvzone.putTextRect(frame, f"🚨 TARGET DETECTED", (max(0, x1), max(35, y1 - 10)), scale=1.2, thickness=2, offset=5, colorR=(0, 0, 255))
-                    
-                    cx, cy = x1 + w // 2, y1 + h // 2
-                    
-                    if track_id != -1:
-                        # Draw a small dot for the track
-                        cv2.circle(frame, (cx, cy), 3, color, cv2.FILLED)
-                        track_paths[track_id].append((cx, cy))
-                        if len(track_paths[track_id]) > 30: track_paths[track_id].pop(0)
+            objects_in_frame = 0
+
+            if cap: # Only run YOLO if we have a real frame
+                results = self.model.track(frame, persist=True, classes=[0, 39, 67], conf=0.5, verbose=False, imgsz=320)
+                local_alert = False
+
+                for r in results:
+                    boxes = r.boxes
+                    objects_in_frame += len(boxes)
+                    for box in boxes:
+                        x1, y1, x2, y2 = box.xyxy[0]
+                        x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
+                        w, h = x2 - x1, y2 - y1
+                        conf = math.ceil((box.conf[0] * 100)) / 100
+                        cls = int(box.cls[0])
+                        currentClass = self.classNames[cls]
+                        track_id = int(box.id[0]) if box.id is not None else -1
+
+                        if currentClass in ["person", "bottle", "cell phone"]:
+                            if track_id != -1:
+                                colors = [(0, 0, 255), (0, 255, 255), (0, 255, 0)] # Red, Yellow, Green
+                                color = colors[track_id % len(colors)]
+                            else:
+                                color = (0, 255, 0)
+
+                            cvzone.cornerRect(frame, (x1, y1, w, h), l=20, t=3, rt=1, colorR=color, colorC=color)
+                            cvzone.putTextRect(frame, f'{currentClass}', (max(0, x1), max(35, y1)), scale=1, thickness=1, colorT=(255,255,255), colorR=color, font=cv2.FONT_HERSHEY_PLAIN, offset=5)
                             
-                        points = track_paths[track_id]
-                        for i in range(1, len(points)):
-                            cv2.line(frame, points[i-1], points[i], color, 2)
                             
-                        
-                        
-        with lock:
-            if local_alert:
-                last_alert_time = time.time()
-            
-            # Alert stays active for 5 seconds after last detection
-            global_alert = (time.time() - last_alert_time) < 5.0
+                with self.lock:
+                    self.current_fps = int(fps_current)
+                    self.objects_count = objects_in_frame
 
-        cvzone.putTextRect(frame, f'FPS: {int(fps_current)}', (20, 50), scale=2, thickness=2, offset=10, colorR=(0, 0, 0), colorT=(0, 255, 0))
+            else:
+                 with self.lock:
+                    self.current_fps = 0
+                    self.objects_count = 0
+                    self.global_alert = False
 
-        with lock:
-            current_frame = frame.copy()
-            if is_recording:
-                if out is None:
-                    timestamp = time.strftime("%Y%m%d-%H%M%S")
-                    video_path = os.path.join(videos_dir, f'output_{timestamp}.avi')
-                    out = cv2.VideoWriter(video_path, fourcc, fps, (frame_width, frame_height))
-                out.write(frame)
-            elif out is not None:
-                out.release()
-                out = None
+            with self.lock:
+                self.current_frame = frame.copy()
+                if self.is_recording and cap: # only record if we have real video
+                    if self.out is None:
+                        timestamp = time.strftime("%Y%m%d-%H%M%S")
+                        video_path = os.path.join(self.videos_dir, f'output_{timestamp}.avi')
+                        self.out = cv2.VideoWriter(video_path, fourcc, fps, (frame_width, frame_height))
+                    self.out.write(frame)
+                elif self.out is not None:
+                    self.out.release()
+                    self.out = None
 
-        ret, buffer = cv2.imencode('.jpg', frame)
-        if ret:
-            with frame_condition:
-                latest_frame_bytes = buffer.tobytes()
-                frame_condition.notify_all()
+            ret, buffer = cv2.imencode('.jpg', frame)
+            if ret:
+                with self.frame_condition:
+                    self.latest_frame_bytes = buffer.tobytes()
+                    self.frame_condition.notify_all()
 
-# Start background thread
-bg_thread = threading.Thread(target=process_video, daemon=True)
-bg_thread.start()
+    def start(self):
+        bg_thread = threading.Thread(target=self.process_video, daemon=True)
+        bg_thread.start()
+
+tracker = TrackerApp()
+tracker.start()
+
+app = Flask(__name__)
 
 def gen_frames():
     while True:
-        with frame_condition:
-            frame_condition.wait()
-            if latest_frame_bytes is None:
+        with tracker.frame_condition:
+            tracker.frame_condition.wait()
+            if tracker.latest_frame_bytes is None:
                 continue
-            frame_data = latest_frame_bytes
+            frame_data = tracker.latest_frame_bytes
         
         yield (b'--frame\r\n'
                b'Content-Type: image/jpeg\r\n\r\n' + frame_data + b'\r\n')
@@ -216,77 +170,63 @@ def index():
 def video_feed():
     return Response(gen_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
 
-@app.route('/upload_fraud', methods=['POST'])
-def upload_fraud():
-    global fraud_kp, fraud_des, fraud_ids, checked_ids, global_alert
-    if 'file' not in request.files:
-        return jsonify({'status': 'error', 'message': 'No file uploaded'})
-    
-    file = request.files['file']
-    npimg = np.frombuffer(file.read(), np.uint8)
-    img = cv2.imdecode(npimg, cv2.IMREAD_COLOR)
-    
-    if img is not None:
-        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        kp, des = sift.detectAndCompute(gray, None)
-        
-        with lock:
-            fraud_kp, fraud_des = kp, des
-            fraud_ids.clear()
-            checked_ids.clear()
-            global_alert = False
-            
-        return jsonify({'status': 'success', 'message': 'Fraud suspect registered!'})
-    return jsonify({'status': 'error', 'message': 'Invalid image'})
+@app.route('/stats')
+def stats():
+    with tracker.lock:
+        return jsonify({
+            'fps': tracker.current_fps,
+            'people_count': tracker.objects_count
+        })
 
-@app.route('/clear_fraud', methods=['POST'])
-def clear_fraud():
-    global fraud_kp, fraud_des, fraud_ids, checked_ids, global_alert, last_alert_time
-    with lock:
-        fraud_kp = None
-        fraud_des = None
-        fraud_ids.clear()
-        checked_ids.clear()
-        global_alert = False
-        last_alert_time = 0
-    return jsonify({'status': 'success', 'message': 'Suspect data cleared'})
-
-@app.route('/alert_status')
-def alert_status():
-    with lock:
-        return jsonify({'alert': global_alert})
 
 @app.route('/screenshot', methods=['POST'])
 def screenshot():
-    with lock:
-        if current_frame is not None:
+    with tracker.lock:
+        if tracker.current_frame is not None:
             timestamp = time.strftime("%Y%m%d-%H%M%S")
-            filename = os.path.join(screenshots_dir, f"screenshot_{timestamp}.jpg")
-            cv2.imwrite(filename, current_frame)
+            filename = os.path.join(tracker.screenshots_dir, f"screenshot_{timestamp}.jpg")
+            cv2.imwrite(filename, tracker.current_frame)
             return jsonify({'status': 'success', 'filename': filename})
     return jsonify({'status': 'error', 'message': 'No frame available'})
 
 @app.route('/toggle_record', methods=['POST'])
 def toggle_record():
-    global is_recording
-    with lock:
-        is_recording = not is_recording
-        state = is_recording
+    with tracker.lock:
+        tracker.is_recording = not tracker.is_recording
+        state = tracker.is_recording
     return jsonify({'status': 'success', 'is_recording': state})
 
 @app.route('/gallery')
 def gallery():
-    shots = sorted([f for f in os.listdir(screenshots_dir) if f.endswith('.jpg')], reverse=True)
-    vids = sorted([f for f in os.listdir(videos_dir) if f.startswith('output_') and f.endswith('.avi')], reverse=True)
+    shots = sorted([f for f in os.listdir(tracker.screenshots_dir) if f.endswith('.jpg')], reverse=True)
+    vids = sorted([f for f in os.listdir(tracker.videos_dir) if f.startswith('output_') and f.endswith('.avi')], reverse=True)
     return render_template('gallery.html', screenshots=shots, videos=vids)
 
 @app.route('/media/screenshots/<filename>')
 def get_screenshot(filename):
-    return send_from_directory(screenshots_dir, filename)
+    return send_from_directory(tracker.screenshots_dir, filename)
 
 @app.route('/media/videos/<filename>')
 def get_video(filename):
-    return send_from_directory(videos_dir, filename)
+    return send_from_directory(tracker.videos_dir, filename)
+
+@app.route('/delete_media', methods=['POST'])
+def delete_media():
+    data = request.json
+    filename = data.get('filename')
+    mtype = data.get('type')
+    
+    if mtype == 'screenshot':
+        filepath = os.path.join(tracker.screenshots_dir, filename)
+    elif mtype == 'video':
+        filepath = os.path.join(tracker.videos_dir, filename)
+    else:
+        return jsonify({'status': 'error', 'message': 'Invalid type'})
+        
+    if os.path.exists(filepath):
+        os.remove(filepath)
+        return jsonify({'status': 'success'})
+    return jsonify({'status': 'error', 'message': 'File not found'})
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=False, threaded=True)

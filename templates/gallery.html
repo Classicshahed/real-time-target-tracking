@@ -4,17 +4,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Saved Media - AI Tracker</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&family=Outfit:wght@500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
 
     <main class="container">
         <header class="header">
-            <h1>Media Gallery</h1>
-            <p>Historical captures and recordings</p>
+            <div class="header-content">
+                <h1>Media Gallery</h1>
+                <p>Historical captures and recordings</p>
+            </div>
             
-            <a href="/" class="nav-link" style="left: 0; right: auto;">
+            <a href="/" class="nav-link glass-btn">
                 <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
                 Back to Dashboard
             </a>
@@ -27,16 +29,15 @@
             </h2>
             <div class="grid">
                 {% for shot in screenshots %}
-                <article class="card glass">
+                <article class="card glass" id="card-screenshot-{{ loop.index }}">
                     <a href="/media/screenshots/{{ shot }}" target="_blank">
                         <img src="/media/screenshots/{{ shot }}" alt="{{ shot }}" loading="lazy">
                     </a>
                     <div class="card-content">
                         <div class="card-title">{{ shot }}</div>
                         <div class="card-actions">
-                            <a href="/media/screenshots/{{ shot }}" download class="btn-primary" style="padding: 0.5rem 1rem; font-size: 0.8rem; border-radius: 8px;">
-                                Download
-                            </a>
+                            <a href="/media/screenshots/{{ shot }}" download class="btn-download">Download</a>
+                            <button class="btn-delete" onclick="deleteMedia('{{ shot }}', 'screenshot', 'card-screenshot-{{ loop.index }}')">Delete</button>
                         </div>
                     </div>
                 </article>
@@ -55,16 +56,15 @@
             </h2>
             <div class="grid">
                 {% for vid in videos %}
-                <article class="card glass">
-                    <div style="height: 220px; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.2);">
+                <article class="card glass" id="card-video-{{ loop.index }}">
+                    <div style="height: 200px; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.4);">
                         <svg width="48" height="48" fill="none" stroke="#ef4444" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z"></path></svg>
                     </div>
                     <div class="card-content">
                         <div class="card-title">{{ vid }}</div>
                         <div class="card-actions">
-                            <a href="/media/videos/{{ vid }}" download class="btn-danger" style="padding: 0.5rem 1rem; font-size: 0.8rem; border-radius: 8px;">
-                                Download AVI
-                            </a>
+                            <a href="/media/videos/{{ vid }}" download class="btn-download">Download</a>
+                            <button class="btn-delete" onclick="deleteMedia('{{ vid }}', 'video', 'card-video-{{ loop.index }}')">Delete</button>
                         </div>
                     </div>
                 </article>
@@ -77,6 +77,42 @@
         </section>
     </main>
 
+    <div id="toast" class="toast glass">Action Successful</div>
+
+    <script>
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        async function deleteMedia(filename, type, cardId) {
+            if(!confirm(`Are you sure you want to delete ${filename}?`)) return;
+            
+            try {
+                const response = await fetch('/delete_media', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ filename, type })
+                });
+                const data = await response.json();
+                
+                if(data.status === 'success') {
+                    document.getElementById(cardId).style.display = 'none';
+                    showToast('🗑️ File deleted successfully');
+                } else {
+                    showToast('❌ Error: ' + data.message);
+                }
+            } catch (err) {
+                console.error(err);
+                showToast('❌ Failed to delete file');
+            }
+        }
+    </script>
 </body>
 </html>
-

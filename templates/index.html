@@ -4,56 +4,76 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Target Tracking Dashboard</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&family=Outfit:wght@500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
 
-    <div id="fraud-alert" class="alert-overlay">
-        <div class="alert-content">🚨 FRAUD DETECTED 🚨</div>
-    </div>
+
 
     <main class="container">
         <header class="header">
-            <h1>AI Target Tracking</h1>
-            <p>Real-time Computer Vision Analytics</p>
-
-            <a href="/gallery" class="nav-link">
+            <div class="header-content">
+                <h1>AI Target Tracking</h1>
+                <p>Real-time Computer Vision Analytics</p>
+            </div>
+            <a href="/gallery" class="nav-link glass-btn">
                 <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
                 Media Gallery
             </a>
         </header>
 
-        <div class="dashboard glass">
-            <div class="video-container">
-                <div id="recording-badge" class="badge">
-                    <div class="badge-dot"></div> Live Recording
+        <div class="dashboard-grid">
+            <!-- Main Video Panel -->
+            <div class="main-panel glass">
+                <div class="video-container">
+                    <div id="recording-badge" class="badge">
+                        <div class="badge-dot"></div> Live Recording
+                    </div>
+                    <!-- Live MJPEG Stream from Flask -->
+                    <img src="/video_feed" alt="Live Video Feed">
                 </div>
-                <!-- Live MJPEG Stream from Flask -->
-                <img src="/video_feed" alt="Live Video Feed">
+
+                <div class="controls">
+
+                    <button id="screenshot-btn" class="btn-primary action-btn" onclick="takeScreenshot()">
+                        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                        <span>Capture Frame</span>
+                    </button>
+                    
+                    <button id="record-btn" class="btn-danger action-btn" onclick="toggleRecording()">
+                        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                        <span id="record-text">Record</span>
+                    </button>
+                </div>
             </div>
 
-            <div class="controls">
-                <label class="btn-label" style="cursor: pointer;">
-                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
-                    Register Suspect
-                    <input type="file" id="fraud-upload" accept="image/*" style="display: none;" onchange="uploadFraud(this)">
-                </label>
+            <!-- Side Analytics Panel -->
+            <div class="side-panel glass">
+                <h2>Real-Time Stats</h2>
                 
-                <button id="clear-fraud-btn" class="btn-secondary" onclick="clearSuspect()" style="background: rgba(255,255,255,0.05);">
-                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                    Remove Suspect
-                </button>
-                
-                <button id="screenshot-btn" class="btn-primary" onclick="takeScreenshot()">
-                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-                    Capture Frame
-                </button>
-                
-                <button id="record-btn" class="btn-danger" onclick="toggleRecording()">
-                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
-                    <span id="record-text">Start Recording</span>
-                </button>
+                <div class="stat-card">
+                    <div class="stat-icon" style="background: rgba(14, 165, 233, 0.2); color: #38bdf8;">
+                        <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                    </div>
+                    <div class="stat-info">
+                        <h3>Live FPS</h3>
+                        <div id="stat-fps" class="stat-value">0</div>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon" style="background: rgba(16, 185, 129, 0.2); color: #34d399;">
+                        <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                    </div>
+                    <div class="stat-info">
+                        <h3>Objects Tracked</h3>
+                        <div id="stat-people" class="stat-value">0</div>
+                    </div>
+                </div>
+
+
+
             </div>
         </div>
     </main>
@@ -97,7 +117,7 @@
                     showToast('🔴 Recording Started');
                 } else {
                     btn.classList.remove('recording');
-                    text.textContent = 'Start Recording';
+                    text.textContent = 'Record';
                     badge.classList.remove('visible');
                     showToast('✅ Video Saved to folder!');
                 }
@@ -106,96 +126,18 @@
             }
         }
 
-        async function uploadFraud(input) {
-            if (!input.files || input.files.length === 0) return;
-            const file = input.files[0];
-            const formData = new FormData();
-            formData.append('file', file);
 
-            try {
-                const response = await fetch('/upload_fraud', {
-                    method: 'POST',
-                    body: formData
-                });
-                const data = await response.json();
-                if(data.status === 'success') {
-                    showToast('🚨 Fraud Suspect Registered!');
-                } else {
-                    showToast('❌ Error: ' + data.message);
-                }
-            } catch (error) {
-                console.error('Error uploading:', error);
-                showToast('❌ Upload failed.');
-            }
-            input.value = ''; // Reset input
-        }
 
-        async function clearSuspect() {
-            try {
-                const response = await fetch('/clear_fraud', { method: 'POST' });
-                const data = await response.json();
-                if(data.status === 'success') {
-                    showToast('🧹 Suspect data cleared');
-                }
-            } catch (error) {
-                console.error('Error clearing suspect:', error);
-            }
-        }
-
-        let audioCtx = null;
-        let beepInterval = null;
-
-        function playBeep() {
-            if (!audioCtx) {
-                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            }
-            if (audioCtx.state === 'suspended') {
-                audioCtx.resume();
-            }
-            const oscillator = audioCtx.createOscillator();
-            const gainNode = audioCtx.createGain();
-            
-            oscillator.type = 'square';
-            oscillator.frequency.setValueAtTime(880, audioCtx.currentTime);
-            
-            gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
-            gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.5);
-            
-            oscillator.connect(gainNode);
-            gainNode.connect(audioCtx.destination);
-            
-            oscillator.start();
-            oscillator.stop(audioCtx.currentTime + 0.5);
-        }
-
-        document.body.addEventListener('click', () => {
-            if (!audioCtx) {
-                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            }
-        }, { once: true });
-
+        // Update stats
         setInterval(async () => {
             try {
-                const response = await fetch('/alert_status');
+                const response = await fetch('/stats');
                 const data = await response.json();
-                const alertOverlay = document.getElementById('fraud-alert');
                 
-                if (data.alert) {
-                    alertOverlay.classList.add('active');
-                    if (!beepInterval) {
-                        playBeep();
-                        beepInterval = setInterval(playBeep, 1000);
-                    }
-                } else {
-                    alertOverlay.classList.remove('active');
-                    if (beepInterval) {
-                        clearInterval(beepInterval);
-                        beepInterval = null;
-                    }
-                }
+                document.getElementById('stat-fps').textContent = data.fps;
+                document.getElementById('stat-people').textContent = data.people_count;
             } catch(e) {}
         }, 500);
     </script>
 </body>
 </html>
-
